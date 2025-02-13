@@ -114,36 +114,65 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.fill();
   }
 
+  let circleTimeout;
+
   function spawnCircle() {
-    let levelGroup = currentLevel <= 6 ? 1 : currentLevel <= 12 ? 2 : 3;
-    let levelNumber = ((currentLevel - 1) % 6) + 1;
+    let levelGroup =
+      currentLevel <= 6
+        ? 1
+        : currentLevel <= 12
+        ? 2
+        : currentLevel <= 18
+        ? 3
+        : 4; // Stage 4
 
+    let levelNumber = ((currentLevel - 1) % 6) + 1; // Get 1-6 index
     let speed =
-      levelGroup !== 2
-        ? baseSpeed * (1 + (levelNumber - 1) * 0.6)
-        : baseSpeed + 2;
+      levelGroup !== 2 && levelGroup !== 4
+        ? baseSpeed * (1 + (levelNumber - 1) * 0.25)
+        : baseSpeed;
+    circleRadius =
+      levelGroup === 1 || levelGroup === 4 ? 40 : 40 - levelNumber * 4;
 
-    circleRadius = levelGroup === 1 ? 40 : 40 - levelNumber * 4;
-
-    if (levelGroup === 3) {
-      posX = Math.random() * (canvas.width - 2 * circleRadius) + circleRadius;
-      posY = Math.random() * (canvas.height - 2 * circleRadius) + circleRadius;
+    // ✅ Stage 4: Static Circle, Moves Every X Seconds
+    if (levelGroup === 4) {
+      let appearTime = 2.4 - (levelNumber - 1) * 0.4; // Starts at 2.4s, decreases by 0.4s per level
+      moveStaticCircle(appearTime);
     } else {
       posX = canvas.width / 2;
       posY = canvas.height / 2;
+      if (levelGroup === 3) {
+        posX = Math.random() * (canvas.width - 2 * circleRadius) + circleRadius;
+        posY =
+          Math.random() * (canvas.height - 2 * circleRadius) + circleRadius;
+      }
+
+      velocityX = speed * (Math.random() > 0.5 ? 1 : -1);
+      velocityY = speed * (Math.random() > 0.5 ? 1 : -1);
+      moveCircle();
     }
-
-    velocityX = speed * (Math.random() > 0.5 ? 1 : -1);
-    velocityY = speed * (Math.random() > 0.5 ? 1 : -1);
-
-    console.log(
-      `Level: ${levelGroup}-${levelNumber} | Speed: ${speed} | Radius: ${circleRadius} | PosX: ${posX} | PosY: ${posY}`
-    );
-
-    moveCircle();
 
     canvas.removeEventListener("pointerdown", handleCircleClick);
     canvas.addEventListener("pointerdown", handleCircleClick);
+  }
+
+  function moveStaticCircle(appearTime) {
+    clearTimeout(circleTimeout); // Clear any previous movement timer
+
+    posX = Math.random() * (canvas.width - 2 * circleRadius) + circleRadius;
+    posY = Math.random() * (canvas.height - 2 * circleRadius) + circleRadius;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawCircle(posX, posY, circleRadius, "#ffcc00");
+
+    console.log(
+      `Static Circle | Pos: (${posX}, ${posY}) | Appears for ${appearTime}s`
+    );
+
+    // Move the circle again after 'appearTime' seconds
+    circleTimeout = setTimeout(() => {
+      moveStaticCircle(appearTime);
+    }, appearTime * 1000);
   }
 
   function moveCircle() {
@@ -186,6 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     clearInterval(timer);
     cancelAnimationFrame(animationFrame);
+    clearTimeout(circleTimeout);
     //backgroundMusic.pause();
     backgroundMusic.currentTime = 0;
 
@@ -217,14 +247,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateLevelDisplay() {
-    let levelPrefix = currentLevel <= 6 ? 1 : currentLevel <= 12 ? 2 : 3;
-    let levelNumber = ((currentLevel - 1) % 6) + 1;
+    let levelPrefix =
+      currentLevel <= 6
+        ? 1
+        : currentLevel <= 12
+        ? 2
+        : currentLevel <= 18
+        ? 3
+        : 4; // Stage 4
+    let levelNumber = ((currentLevel - 1) % 6) + 1; // Loop from 1-6
 
     levelElement.textContent = `LEVEL ${levelPrefix}-${levelNumber}`;
   }
 
   function nextLevel() {
-    if (currentLevel < 18) {
+    if (currentLevel < 24) {
+      // Now we have 24 levels (1-1 to 4-6)
       currentLevel++;
       prepareEnv();
     }
@@ -247,8 +285,8 @@ document.addEventListener("DOMContentLoaded", () => {
     restartGame();
   }
 
-  canvas.removeEventListener("click", handleCircleClick);
-  canvas.addEventListener("click", handleCircleClick);
+  canvas.removeEventListener("pointerdown", handleCircleClick);
+  canvas.addEventListener("pointerdown", handleCircleClick);
 
   function handleCircleClick(event) {
     const rect = canvas.getBoundingClientRect();
