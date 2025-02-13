@@ -1,4 +1,4 @@
-const backgroundMusic = new Audio("audio\\M_RetroArcade_MusicLoop_01.wav"); // Path to music file
+const backgroundMusic = new Audio("audio/M_RetroArcade_MusicLoop_01.wav"); // Path to music file
 backgroundMusic.loop = true; // Makes the music loop continuously
 backgroundMusic.volume = 0.5; // Adjust volume (0.0 to 1.0)
 
@@ -18,7 +18,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const startButton = document.getElementById("start-button");
   const timerDisplay = document.getElementById("timer-cnt");
   const gameMessage = document.getElementById("game-message");
-  const board = document.getElementById("board");
+  const canvas = document.getElementById("game-canvas");
+  const ctx = canvas.getContext("2d");
+  let gameEnded = false;
 
   let circle,
     posX,
@@ -35,11 +37,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const speedIncreaseFactor = 1.15;
   const serverUrl = "http://localhost:3000"; // Backend URL
 
-  // ✅ Initialize Game & Fetch High Score
-  window.onload = () => {
-    updateLevelDisplay();
-    fetchHighScore(currentLevel);
-  };
+  updateLevelDisplay();
+  fetchHighScore(currentLevel);
+
+  function resizeCanvas() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
 
   // ✅ Event Listeners
   startButton.addEventListener("click", startGame);
@@ -73,6 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function startGame() {
+    gameEnded = false; // Reset flag for new game
     resetGame();
     backgroundMusic.play(); // 🎵 Start music when game begins
     startButton.classList.add("hidden");
@@ -99,78 +106,87 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 10);
   }
 
+  function drawCircle(x, y, radius, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   function spawnCircle() {
-    circle = document.createElement("div");
-    circle.classList.add("circle");
-    board.appendChild(circle);
-    posX = 50;
-    posY = 50;
-
-    // Adjust Speed Based on Level
+    posX = canvas.width / 2;
+    posY = canvas.height / 2;
     let speed = baseSpeed + currentLevel * speedIncreaseFactor;
-
     velocityX = speed * (Math.random() > 0.5 ? 1 : -1);
     velocityY = speed * (Math.random() > 0.5 ? 1 : -1);
 
-    circle.style.display = "block";
-
     function moveCircle() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawCircle(posX, posY, 30, "#ffcc00");
+
       posX += velocityX;
       posY += velocityY;
 
-      // Detect border collision and play sound
-      if (posX <= 0 || posX + circle.clientWidth >= board.clientWidth) {
+      if (posX <= 0 || posX + 30 >= canvas.width) {
         velocityX = -velocityX;
-        hitSound.play(); // 🔊 Play border hit sound
+        hitSound.play();
       }
-      if (posY <= 0 || posY + circle.clientHeight >= board.clientHeight) {
+      if (posY <= 0 || posY + 30 >= canvas.height) {
         velocityY = -velocityY;
-        hitSound.play(); // 🔊 Play border hit sound
+        hitSound.play();
       }
-
-      circle.style.left = posX + "px";
-      circle.style.top = posY + "px";
 
       animationFrame = requestAnimationFrame(moveCircle);
     }
 
     moveCircle();
 
-    // 🔊 Play click sound when the user clicks the circle
-    circle.addEventListener("click", () => {
-      clickSound.play();
-      endGame();
+    canvas.addEventListener("click", (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+
+      if (Math.sqrt((mouseX - posX) ** 2 + (mouseY - posY) ** 2) <= 30) {
+        clickSound.play();
+        endGame();
+      }
     });
   }
 
   function endGame() {
+    if (gameEnded) return; // Prevent multiple executions
+    gameEnded = true; // Set flag
+
     clearInterval(timer);
     cancelAnimationFrame(animationFrame);
-    //backgroundMusic.pause(); // 🎵 Pause music when game ends
+    backgroundMusic.pause();
+    backgroundMusic.currentTime = 0; // Reset music
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
 
     let currentTime = parseFloat(timerDisplay.textContent);
     let hiScore = parseFloat(hiScoreElement.textContent);
 
-    gameMessage.textContent = `Your time: ${currentTime.toFixed(2)} sec`;
+    // Display time result
+    gameMessage.innerHTML = `Your time: ${currentTime.toFixed(2)} sec`;
 
+    // If it's a new high score, add a new line with "New High Score!"
     if (hiScoreElement.textContent === "-" || currentTime < hiScore) {
       hiScoreElement.textContent = currentTime.toFixed(2);
       updateHighScore(currentLevel, currentTime.toFixed(2));
-      gameMessage.textContent += `\nNew High Score! 🎉`;
+      gameMessage.innerHTML += `<br>New High Score! 🎉`; // Proper new line
     }
 
     gameMessage.classList.remove("hidden");
     lastScoreElement.textContent = currentTime.toFixed(2);
-    resetGame();
+    startButton.classList.remove("hidden"); // Show start button
   }
 
   function resetGame() {
-    if (circle) {
-      circle.remove(); // Remove the existing circle before replaying
-    }
-    cancelAnimationFrame(animationFrame); // Stop existing movement animation
-    clearInterval(timer); // Stop previous timer
-    startButton.classList.remove("hidden");
+    cancelAnimationFrame(animationFrame); // Stop animation loop
+    clearInterval(timer); // Stop the timer
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+    startButton.classList.remove("hidden"); // Show start button
   }
 
   function updateLevelDisplay() {
@@ -180,26 +196,34 @@ document.addEventListener("DOMContentLoaded", () => {
   function nextLevel() {
     if (currentLevel < maxLevel) {
       currentLevel++;
-      fetchHighScore(currentLevel);
       prepareEnv();
-      // updateLevelDisplay();
-      // fetchHighScore(currentLevel);
     }
   }
 
   function prevLevel() {
     if (currentLevel > minLevel) {
       currentLevel--;
-      fetchHighScore(currentLevel);
       prepareEnv();
-      //updateLevelDisplay();
-      //fetchHighScore(currentLevel);
     }
   }
 
   function prepareEnv() {
     updateLevelDisplay();
     lastScoreElement.textContent = `-`;
-    restartGame();
+    fetchHighScore(currentLevel);
+
+    // Ensure UI elements are reset properly
+    gameMessage.classList.add("hidden"); // Hide game message
+    startButton.classList.remove("hidden"); // Show start button
+    resetGame(); // Fully reset game state
+  }
+
+  canvas.removeEventListener("click", handleCircleClick);
+  canvas.addEventListener("click", handleCircleClick);
+
+  function handleCircleClick(event) {
+    if (gameEnded) return; // Ensure endGame() only runs once
+    clickSound.play();
+    endGame();
   }
 });
