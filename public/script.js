@@ -115,8 +115,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   let circleTimeout;
+  let fakeCircles = []; // Store fake circles
+  const fakeCircleColor = "#FFFFFF"; // Fake circle color
 
   function spawnCircle() {
+    clearTimeout(circleTimeout); // ✅ Stop Stage 4 if switching to Stage 5
+
     let levelGroup =
       currentLevel <= 6
         ? 1
@@ -124,9 +128,11 @@ document.addEventListener("DOMContentLoaded", () => {
         ? 2
         : currentLevel <= 18
         ? 3
-        : 4; // Stage 4
+        : currentLevel <= 24
+        ? 4
+        : 5; // Stage 5
 
-    let levelNumber = ((currentLevel - 1) % 6) + 1; // Get 1-6 index
+    let levelNumber = ((currentLevel - 1) % 6) + 1;
     let speed =
       levelGroup !== 2 && levelGroup !== 4
         ? baseSpeed * (1 + (levelNumber - 1) * 0.25)
@@ -134,10 +140,44 @@ document.addEventListener("DOMContentLoaded", () => {
     circleRadius =
       levelGroup === 1 || levelGroup === 4 ? 40 : 40 - levelNumber * 4;
 
-    // ✅ Stage 4: Static Circle, Moves Every X Seconds
+    if (levelGroup !== 5) {
+      fakeCircles = []; // ✅ Clear fake circles when switching levels
+    }
+    // ✅ Stage 4: Static Circle (DO NOT run if Stage 5)
     if (levelGroup === 4) {
-      let appearTime = 2.4 - (levelNumber - 1) * 0.4; // Starts at 2.4s, decreases by 0.4s per level
+      let appearTime = 2.4 - (levelNumber - 1) * 0.4;
       moveStaticCircle(appearTime);
+      return; // ✅ Stop execution so Stage 5 does not run
+    }
+
+    // ✅ Stage 5: Fake Circles (Only runs in Stage 5)
+    if (levelGroup === 5) {
+      fakeCircles = []; // Reset previous fake circles
+      for (let i = 0; i < levelNumber; i++) {
+        let fakePosX =
+          Math.random() * (canvas.width - 2 * circleRadius) + circleRadius;
+        let fakePosY =
+          Math.random() * (canvas.height - 2 * circleRadius) + circleRadius;
+        let fakeVelocityX = speed * (Math.random() > 0.5 ? 1 : -1);
+        let fakeVelocityY = speed * (Math.random() > 0.5 ? 1 : -1);
+        let fakeColor = getRandomColor(); // ✅ Assign a random color
+
+        fakeCircles.push({
+          x: fakePosX,
+          y: fakePosY,
+          vx: fakeVelocityX,
+          vy: fakeVelocityY,
+          color: fakeColor, // ✅ Store the color for each circle
+        });
+      }
+
+      // ✅ Also set main circle in Stage 5
+      posX = Math.random() * (canvas.width - 2 * circleRadius) + circleRadius;
+      posY = Math.random() * (canvas.height - 2 * circleRadius) + circleRadius;
+      velocityX = speed * (Math.random() > 0.5 ? 1 : -1);
+      velocityY = speed * (Math.random() > 0.5 ? 1 : -1);
+
+      moveCircle(); // ✅ Start movement
     } else {
       posX = canvas.width / 2;
       posY = canvas.height / 2;
@@ -177,33 +217,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function moveCircle() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // ✅ Draw Fake Circles (Stage 5)
+    fakeCircles.forEach((circle) => {
+      drawCircle(circle.x, circle.y, circleRadius, circle.color); // ✅ Use each circle's unique color
+      circle.x += circle.vx;
+      circle.y += circle.vy;
+
+      // Bounce logic
+      if (
+        circle.x - circleRadius <= 0 ||
+        circle.x + circleRadius >= canvas.width
+      ) {
+        circle.vx = -circle.vx;
+      }
+      if (
+        circle.y - circleRadius <= 0 ||
+        circle.y + circleRadius >= canvas.height
+      ) {
+        circle.vy = -circle.vy;
+      }
+    });
+
+    // ✅ Draw Main Circle (Always Yellow)
     drawCircle(posX, posY, circleRadius, "#ffcc00");
 
     posX += velocityX;
     posY += velocityY;
 
-    if (posX - circleRadius <= 0) {
-      posX = circleRadius;
+    // ✅ Bounce Logic for Main Circle
+    if (posX - circleRadius <= 0 || posX + circleRadius >= canvas.width) {
+      hitSound.play();
       velocityX = -velocityX;
-      hitSound.play();
     }
-
-    if (posX + circleRadius >= canvas.width) {
-      posX = canvas.width - circleRadius;
-      velocityX = -velocityX;
+    if (posY - circleRadius <= 0 || posY + circleRadius >= canvas.height) {
       hitSound.play();
-    }
-
-    if (posY - circleRadius <= 0) {
-      posY = circleRadius;
       velocityY = -velocityY;
-      hitSound.play();
-    }
-
-    if (posY + circleRadius >= canvas.height) {
-      posY = canvas.height - circleRadius;
-      velocityY = -velocityY;
-      hitSound.play();
     }
 
     animationFrame = requestAnimationFrame(moveCircle);
@@ -216,7 +265,8 @@ document.addEventListener("DOMContentLoaded", () => {
     clearInterval(timer);
     cancelAnimationFrame(animationFrame);
     clearTimeout(circleTimeout);
-    //backgroundMusic.pause();
+    fakeCircles = []; // ✅ Clear fake circles when game ends
+
     backgroundMusic.currentTime = 0;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -254,15 +304,18 @@ document.addEventListener("DOMContentLoaded", () => {
         ? 2
         : currentLevel <= 18
         ? 3
-        : 4; // Stage 4
+        : currentLevel <= 24
+        ? 4
+        : 5; // Stage 5
+
     let levelNumber = ((currentLevel - 1) % 6) + 1; // Loop from 1-6
 
     levelElement.textContent = `LEVEL ${levelPrefix}-${levelNumber}`;
   }
 
   function nextLevel() {
-    if (currentLevel < 24) {
-      // Now we have 24 levels (1-1 to 4-6)
+    if (currentLevel < 30) {
+      // Now we have 30 levels (1-1 to 5-6)
       currentLevel++;
       prepareEnv();
     }
@@ -293,11 +346,30 @@ document.addEventListener("DOMContentLoaded", () => {
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
 
+    // ✅ Check if the player clicked the Main Circle
     if (
       Math.sqrt((mouseX - posX) ** 2 + (mouseY - posY) ** 2) <= circleRadius
     ) {
       clickSound.play();
       endGame();
+      return;
     }
+
+    // ✅ Fake circles do nothing when clicked
+    fakeCircles.forEach((circle) => {
+      if (
+        Math.sqrt((mouseX - circle.x) ** 2 + (mouseY - circle.y) ** 2) <=
+        circleRadius
+      ) {
+        console.log("Fake circle clicked! No effect.");
+      }
+    });
+  }
+
+  function getRandomColor() {
+    // Generate a random hex color
+    return `#${Math.floor(Math.random() * 16777215)
+      .toString(16)
+      .padStart(6, "0")}`;
   }
 });
