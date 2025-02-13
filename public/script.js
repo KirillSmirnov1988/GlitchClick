@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("game-canvas");
   const ctx = canvas.getContext("2d");
   let gameEnded = false;
+  let circleRadius = 50;
 
   let circle,
     posX,
@@ -120,37 +121,50 @@ document.addEventListener("DOMContentLoaded", () => {
     velocityX = speed * (Math.random() > 0.5 ? 1 : -1);
     velocityY = speed * (Math.random() > 0.5 ? 1 : -1);
 
-    function moveCircle() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawCircle(posX, posY, 30, "#ffcc00");
+    moveCircle(); // Start movement
 
-      posX += velocityX;
-      posY += velocityY;
+    // ✅ Remove any previous click listeners before adding a new one
+    canvas.removeEventListener("pointerdown", handleCircleClick);
+    canvas.addEventListener("pointerdown", handleCircleClick);
+  }
 
-      if (posX <= 0 || posX + 30 >= canvas.width) {
-        velocityX = -velocityX;
-        hitSound.play();
-      }
-      if (posY <= 0 || posY + 30 >= canvas.height) {
-        velocityY = -velocityY;
-        hitSound.play();
-      }
+  // ✅ Keep `moveCircle()` outside `spawnCircle()` to avoid multiple animations
+  function moveCircle() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawCircle(posX, posY, circleRadius, "#ffcc00");
 
-      animationFrame = requestAnimationFrame(moveCircle);
+    posX += velocityX;
+    posY += velocityY;
+
+    // ✅ Fix Left Border Collision
+    if (posX - circleRadius <= 0) {
+      posX = circleRadius; // Prevent going out of bounds
+      velocityX = -velocityX;
+      hitSound.play();
     }
 
-    moveCircle();
+    // ✅ Fix Right Border Collision
+    if (posX + circleRadius >= canvas.width) {
+      posX = canvas.width - circleRadius;
+      velocityX = -velocityX;
+      hitSound.play();
+    }
 
-    canvas.addEventListener("click", (event) => {
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = event.clientX - rect.left;
-      const mouseY = event.clientY - rect.top;
+    // ✅ Fix Top Border Collision
+    if (posY - circleRadius <= 0) {
+      posY = circleRadius;
+      velocityY = -velocityY;
+      hitSound.play();
+    }
 
-      if (Math.sqrt((mouseX - posX) ** 2 + (mouseY - posY) ** 2) <= 30) {
-        clickSound.play();
-        endGame();
-      }
-    });
+    // ✅ Fix Bottom Border Collision
+    if (posY + circleRadius >= canvas.height) {
+      posY = canvas.height - circleRadius;
+      velocityY = -velocityY;
+      hitSound.play();
+    }
+
+    animationFrame = requestAnimationFrame(moveCircle);
   }
 
   function endGame() {
@@ -159,7 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     clearInterval(timer);
     cancelAnimationFrame(animationFrame);
-    backgroundMusic.pause();
+    //backgroundMusic.pause();
     backgroundMusic.currentTime = 0; // Reset music
 
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
@@ -215,15 +229,22 @@ document.addEventListener("DOMContentLoaded", () => {
     // Ensure UI elements are reset properly
     gameMessage.classList.add("hidden"); // Hide game message
     startButton.classList.remove("hidden"); // Show start button
-    resetGame(); // Fully reset game state
+    restartGame(); // Fully reset game state
   }
 
   canvas.removeEventListener("click", handleCircleClick);
   canvas.addEventListener("click", handleCircleClick);
 
   function handleCircleClick(event) {
-    if (gameEnded) return; // Ensure endGame() only runs once
-    clickSound.play();
-    endGame();
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    if (
+      Math.sqrt((mouseX - posX) ** 2 + (mouseY - posY) ** 2) <= circleRadius
+    ) {
+      clickSound.play();
+      endGame();
+    }
   }
 });
