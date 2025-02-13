@@ -77,8 +77,8 @@ body {
 /* Circle - Adjusts Dynamically */
 .circle {
     position: absolute;
-    width: max(4vw, 4vh); 
-    height: max(4vw, 4vh); 
+    width: max(5vw, 5vh); 
+    height: max(5vw, 5vh); 
     aspect-ratio: 1 / 1; 
     background-color: #ffcc00;
     border-radius: 50%;

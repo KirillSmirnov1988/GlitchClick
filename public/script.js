@@ -1,3 +1,13 @@
+const backgroundMusic = new Audio("audio\\M_RetroArcade_MusicLoop_01.wav"); // Path to music file
+backgroundMusic.loop = true; // Makes the music loop continuously
+backgroundMusic.volume = 0.5; // Adjust volume (0.0 to 1.0)
+
+const hitSound = new Audio("audio/hit.wav"); // Sound effect when hitting the border
+hitSound.volume = 0.7; // Adjust volume (0.0 to 1.0)
+
+const clickSound = new Audio("audio/click.wav"); // Sound effect when clicking the circle
+clickSound.volume = 1.0; // Full volume
+
 document.addEventListener("DOMContentLoaded", () => {
   const levelElement = document.getElementById("level");
   const lastScoreElement = document.getElementById("cnt-score");
@@ -20,28 +30,54 @@ document.addEventListener("DOMContentLoaded", () => {
     animationFrame;
   let currentLevel = 1;
   const minLevel = 1;
-  const maxLevel = 10;
-  const baseSpeed = 1;
-  const speedIncreaseFactor = 1.2;
+  const maxLevel = 5;
+  const baseSpeed = 2;
+  const speedIncreaseFactor = 1.15;
+  const serverUrl = "http://localhost:3000"; // Backend URL
 
+  // ✅ Initialize Game & Fetch High Score
   window.onload = () => {
-    console.log("App started.");
     updateLevelDisplay();
-    lastScoreElement.textContent = `-`;
-    hiScoreElement.textContent = `-`;
+    fetchHighScore(currentLevel);
   };
 
+  // ✅ Event Listeners
   startButton.addEventListener("click", startGame);
   replayElement.addEventListener("click", restartGame);
   nextLevelElement.addEventListener("click", nextLevel);
   prevLevelElement.addEventListener("click", prevLevel);
 
+  // ✅ Fetch High Score for Current Level
+  async function fetchHighScore(level) {
+    try {
+      const response = await fetch(`${serverUrl}/highscores/${level}`);
+      const data = await response.json();
+      hiScoreElement.textContent =
+        data.highScore !== null ? data.highScore : "-";
+    } catch (error) {
+      console.error("Failed to fetch high score:", error);
+    }
+  }
+
+  // ✅ Save New High Score
+  async function updateHighScore(level, score) {
+    try {
+      await fetch(`${serverUrl}/highscores/${level}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ highScore: score }),
+      });
+    } catch (error) {
+      console.error("Failed to update high score:", error);
+    }
+  }
+
   function startGame() {
     resetGame();
+    backgroundMusic.play(); // 🎵 Start music when game begins
     startButton.classList.add("hidden");
     gameMessage.classList.add("hidden");
     timerDisplay.textContent = "0.0";
-
     startTimer();
     spawnCircle();
   }
@@ -70,6 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
     posX = 50;
     posY = 50;
 
+    // Adjust Speed Based on Level
     let speed = baseSpeed + currentLevel * speedIncreaseFactor;
 
     velocityX = speed * (Math.random() > 0.5 ? 1 : -1);
@@ -81,11 +118,14 @@ document.addEventListener("DOMContentLoaded", () => {
       posX += velocityX;
       posY += velocityY;
 
+      // Detect border collision and play sound
       if (posX <= 0 || posX + circle.clientWidth >= board.clientWidth) {
         velocityX = -velocityX;
+        hitSound.play(); // 🔊 Play border hit sound
       }
       if (posY <= 0 || posY + circle.clientHeight >= board.clientHeight) {
         velocityY = -velocityY;
+        hitSound.play(); // 🔊 Play border hit sound
       }
 
       circle.style.left = posX + "px";
@@ -96,23 +136,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     moveCircle();
 
-    circle.addEventListener("click", endGame);
+    // 🔊 Play click sound when the user clicks the circle
+    circle.addEventListener("click", () => {
+      clickSound.play();
+      endGame();
+    });
   }
 
   function endGame() {
     clearInterval(timer);
     cancelAnimationFrame(animationFrame);
+    //backgroundMusic.pause(); // 🎵 Pause music when game ends
 
-    gameMessage.textContent = `Your time: ${timerDisplay.textContent} sec`;
     let currentTime = parseFloat(timerDisplay.textContent);
-    let hiScore =
-      hiScoreElement.textContent === "-"
-        ? Infinity
-        : parseFloat(hiScoreElement.textContent);
+    let hiScore = parseFloat(hiScoreElement.textContent);
 
-    if (currentTime < hiScore) {
-      gameMessage.textContent += `\nNew High Score! 🎉`;
+    gameMessage.textContent = `Your time: ${currentTime.toFixed(2)} sec`;
+
+    if (hiScoreElement.textContent === "-" || currentTime < hiScore) {
       hiScoreElement.textContent = currentTime.toFixed(2);
+      updateHighScore(currentLevel, currentTime.toFixed(2));
+      gameMessage.textContent += `\nNew High Score! 🎉`;
     }
 
     gameMessage.classList.remove("hidden");
@@ -122,10 +166,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function resetGame() {
     if (circle) {
-      circle.remove();
+      circle.remove(); // Remove the existing circle before replaying
     }
-    cancelAnimationFrame(animationFrame);
-    clearInterval(timer);
+    cancelAnimationFrame(animationFrame); // Stop existing movement animation
+    clearInterval(timer); // Stop previous timer
     startButton.classList.remove("hidden");
   }
 
@@ -136,21 +180,26 @@ document.addEventListener("DOMContentLoaded", () => {
   function nextLevel() {
     if (currentLevel < maxLevel) {
       currentLevel++;
+      fetchHighScore(currentLevel);
       prepareEnv();
+      // updateLevelDisplay();
+      // fetchHighScore(currentLevel);
     }
   }
 
   function prevLevel() {
     if (currentLevel > minLevel) {
       currentLevel--;
+      fetchHighScore(currentLevel);
       prepareEnv();
+      //updateLevelDisplay();
+      //fetchHighScore(currentLevel);
     }
   }
 
   function prepareEnv() {
     updateLevelDisplay();
     lastScoreElement.textContent = `-`;
-    hiScoreElement.textContent = `-`;
     restartGame();
   }
 });
