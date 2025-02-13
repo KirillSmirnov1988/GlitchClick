@@ -1,12 +1,12 @@
-const backgroundMusic = new Audio("audio/M_RetroArcade_MusicLoop_01.wav"); // Path to music file
-backgroundMusic.loop = true; // Makes the music loop continuously
-backgroundMusic.volume = 0.5; // Adjust volume (0.0 to 1.0)
+const backgroundMusic = new Audio("audio/retro.mp3");
+backgroundMusic.loop = true;
+backgroundMusic.volume = 0.5;
 
-const hitSound = new Audio("audio/hit.wav"); // Sound effect when hitting the border
-hitSound.volume = 0.7; // Adjust volume (0.0 to 1.0)
+const hitSound = new Audio("audio/hit.mp3");
+hitSound.volume = 0.7;
 
-const clickSound = new Audio("audio/click.wav"); // Sound effect when clicking the circle
-clickSound.volume = 1.0; // Full volume
+const clickSound = new Audio("audio/click.mp3");
+clickSound.volume = 1.0;
 
 document.addEventListener("DOMContentLoaded", () => {
   const levelElement = document.getElementById("level");
@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const maxLevel = 5;
   const baseSpeed = 2;
   const speedIncreaseFactor = 1.15;
-  const serverUrl = "http://localhost:3000"; // Backend URL
+  const serverUrl = "http://localhost:3000";
 
   updateLevelDisplay();
   fetchHighScore(currentLevel);
@@ -48,13 +48,13 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", resizeCanvas);
   resizeCanvas();
 
-  // ✅ Event Listeners
+  // Event Listeners
   startButton.addEventListener("click", startGame);
   replayElement.addEventListener("click", restartGame);
   nextLevelElement.addEventListener("click", nextLevel);
   prevLevelElement.addEventListener("click", prevLevel);
 
-  // ✅ Fetch High Score for Current Level
+  // Fetch High Score for Current Level
   async function fetchHighScore(level) {
     try {
       const response = await fetch(`${serverUrl}/highscores/${level}`);
@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ✅ Save New High Score
+  // Save New High Score
   async function updateHighScore(level, score) {
     try {
       await fetch(`${serverUrl}/highscores/${level}`, {
@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function startGame() {
     gameEnded = false; // Reset flag for new game
     resetGame();
-    backgroundMusic.play(); // 🎵 Start music when game begins
+    backgroundMusic.play(); // Start music when game begins
     startButton.classList.add("hidden");
     gameMessage.classList.add("hidden");
     timerDisplay.textContent = "0.0";
@@ -115,20 +115,37 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function spawnCircle() {
-    posX = canvas.width / 2;
-    posY = canvas.height / 2;
-    let speed = baseSpeed + currentLevel * speedIncreaseFactor;
+    let levelGroup = currentLevel <= 6 ? 1 : currentLevel <= 12 ? 2 : 3;
+    let levelNumber = ((currentLevel - 1) % 6) + 1;
+
+    let speed =
+      levelGroup !== 2
+        ? baseSpeed * (1 + (levelNumber - 1) * 0.6)
+        : baseSpeed + 2;
+
+    circleRadius = levelGroup === 1 ? 40 : 40 - levelNumber * 4;
+
+    if (levelGroup === 3) {
+      posX = Math.random() * (canvas.width - 2 * circleRadius) + circleRadius;
+      posY = Math.random() * (canvas.height - 2 * circleRadius) + circleRadius;
+    } else {
+      posX = canvas.width / 2;
+      posY = canvas.height / 2;
+    }
+
     velocityX = speed * (Math.random() > 0.5 ? 1 : -1);
     velocityY = speed * (Math.random() > 0.5 ? 1 : -1);
 
-    moveCircle(); // Start movement
+    console.log(
+      `Level: ${levelGroup}-${levelNumber} | Speed: ${speed} | Radius: ${circleRadius} | PosX: ${posX} | PosY: ${posY}`
+    );
 
-    // ✅ Remove any previous click listeners before adding a new one
+    moveCircle();
+
     canvas.removeEventListener("pointerdown", handleCircleClick);
     canvas.addEventListener("pointerdown", handleCircleClick);
   }
 
-  // ✅ Keep `moveCircle()` outside `spawnCircle()` to avoid multiple animations
   function moveCircle() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawCircle(posX, posY, circleRadius, "#ffcc00");
@@ -136,28 +153,24 @@ document.addEventListener("DOMContentLoaded", () => {
     posX += velocityX;
     posY += velocityY;
 
-    // ✅ Fix Left Border Collision
     if (posX - circleRadius <= 0) {
-      posX = circleRadius; // Prevent going out of bounds
+      posX = circleRadius;
       velocityX = -velocityX;
       hitSound.play();
     }
 
-    // ✅ Fix Right Border Collision
     if (posX + circleRadius >= canvas.width) {
       posX = canvas.width - circleRadius;
       velocityX = -velocityX;
       hitSound.play();
     }
 
-    // ✅ Fix Top Border Collision
     if (posY - circleRadius <= 0) {
       posY = circleRadius;
       velocityY = -velocityY;
       hitSound.play();
     }
 
-    // ✅ Fix Bottom Border Collision
     if (posY + circleRadius >= canvas.height) {
       posY = canvas.height - circleRadius;
       velocityY = -velocityY;
@@ -168,15 +181,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function endGame() {
-    if (gameEnded) return; // Prevent multiple executions
-    gameEnded = true; // Set flag
+    if (gameEnded) return;
+    gameEnded = true;
 
     clearInterval(timer);
     cancelAnimationFrame(animationFrame);
     //backgroundMusic.pause();
-    backgroundMusic.currentTime = 0; // Reset music
+    backgroundMusic.currentTime = 0;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     let currentTime = parseFloat(timerDisplay.textContent);
     let hiScore = parseFloat(hiScoreElement.textContent);
@@ -188,34 +201,37 @@ document.addEventListener("DOMContentLoaded", () => {
     if (hiScoreElement.textContent === "-" || currentTime < hiScore) {
       hiScoreElement.textContent = currentTime.toFixed(2);
       updateHighScore(currentLevel, currentTime.toFixed(2));
-      gameMessage.innerHTML += `<br>New High Score! 🎉`; // Proper new line
+      gameMessage.innerHTML += `<br>New High Score! 🎉`;
     }
 
     gameMessage.classList.remove("hidden");
     lastScoreElement.textContent = currentTime.toFixed(2);
-    startButton.classList.remove("hidden"); // Show start button
+    startButton.classList.remove("hidden");
   }
 
   function resetGame() {
-    cancelAnimationFrame(animationFrame); // Stop animation loop
-    clearInterval(timer); // Stop the timer
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-    startButton.classList.remove("hidden"); // Show start button
+    cancelAnimationFrame(animationFrame);
+    clearInterval(timer);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    startButton.classList.remove("hidden");
   }
 
   function updateLevelDisplay() {
-    levelElement.textContent = `LEVEL 1-${currentLevel}`;
+    let levelPrefix = currentLevel <= 6 ? 1 : currentLevel <= 12 ? 2 : 3;
+    let levelNumber = ((currentLevel - 1) % 6) + 1;
+
+    levelElement.textContent = `LEVEL ${levelPrefix}-${levelNumber}`;
   }
 
   function nextLevel() {
-    if (currentLevel < maxLevel) {
+    if (currentLevel < 18) {
       currentLevel++;
       prepareEnv();
     }
   }
 
   function prevLevel() {
-    if (currentLevel > minLevel) {
+    if (currentLevel > 1) {
       currentLevel--;
       prepareEnv();
     }
@@ -226,10 +242,9 @@ document.addEventListener("DOMContentLoaded", () => {
     lastScoreElement.textContent = `-`;
     fetchHighScore(currentLevel);
 
-    // Ensure UI elements are reset properly
-    gameMessage.classList.add("hidden"); // Hide game message
-    startButton.classList.remove("hidden"); // Show start button
-    restartGame(); // Fully reset game state
+    gameMessage.classList.add("hidden");
+    startButton.classList.remove("hidden");
+    restartGame();
   }
 
   canvas.removeEventListener("click", handleCircleClick);
