@@ -137,3 +137,34 @@ body {
     justify-self: center;
 }
 
+.popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: black;
+    color: #ffcc00;
+    font-family: 'Press Start 2P', cursive;
+    text-align: center;
+    padding: 20px;
+    border: 3px solid #ffcc00;
+    z-index: 1000;
+}
+
+.popup input {
+    width: 80%;
+    padding: 10px;
+    font-size: 14px;
+    margin-top: 10px;
+    text-align: center;
+}
+
+.popup button {
+    background-color: #ffcc00;
+    color: black;
+    border: 2px solid black;
+    padding: 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+    margin-top: 10px;
+}

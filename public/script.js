@@ -22,6 +22,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const ctx = canvas.getContext("2d");
   let gameEnded = false;
   let circleRadius = 50;
+  const popup = document.createElement("div");
+  popup.innerHTML = `
+    <div class="popup">
+      <p>Please Enter Your Name</p>
+      <input type="text" id="username-input" placeholder="Enter your name" />
+      <button id="start-fun">START FUN</button>
+    </div>
+  `;
+  document.body.appendChild(popup);
+
+  const usernameInput = document.getElementById("username-input");
+  const startFunButton = document.getElementById("start-fun");
+
+  let username = null;
 
   let circle,
     posX,
@@ -32,10 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
     startTime,
     animationFrame;
   let currentLevel = 1;
-  const minLevel = 1;
-  const maxLevel = 5;
   const baseSpeed = 2;
-  const speedIncreaseFactor = 1.15;
   const serverUrl = "http://localhost:3000";
 
   updateLevelDisplay();
@@ -50,6 +61,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Event Listeners
   startButton.addEventListener("click", startGame);
+  startFunButton.addEventListener("click", async () => {
+    username = usernameInput.value.trim();
+    if (!username) return alert("Please enter a name!");
+
+    try {
+      const response = await fetch(`${serverUrl}/user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        localStorage.setItem("username", username);
+        popup.remove();
+        console.log("✅ User data:", data.data);
+      } else {
+        alert("Error loading user!");
+      }
+    } catch (error) {
+      console.error("❌ Error:", error);
+    }
+  });
   replayElement.addEventListener("click", restartGame);
   nextLevelElement.addEventListener("click", nextLevel);
   prevLevelElement.addEventListener("click", prevLevel);
@@ -115,137 +149,44 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   let circleTimeout;
-  let fakeCircles = []; // Store fake circles
-  const fakeCircleColor = "#FFFFFF"; // Fake circle color
 
   function spawnCircle() {
-    clearTimeout(circleTimeout); // ✅ Stop Stage 4 if switching to Stage 5
+    clearTimeout(circleTimeout);
 
     let levelGroup =
-      currentLevel <= 6
-        ? 1
-        : currentLevel <= 12
-        ? 2
-        : currentLevel <= 18
-        ? 3
-        : currentLevel <= 24
-        ? 4
-        : 5; // Stage 5
+      currentLevel <= 6 ? 1 : currentLevel <= 12 ? 2 : currentLevel <= 18;
 
     let levelNumber = ((currentLevel - 1) % 6) + 1;
     let speed =
-      levelGroup !== 2 && levelGroup !== 4
-        ? baseSpeed * (1 + (levelNumber - 1) * 0.25)
-        : baseSpeed;
+      levelGroup !== 2 ? baseSpeed * (1 + (levelNumber - 1) * 0.25) : baseSpeed;
     circleRadius =
       levelGroup === 1 || levelGroup === 4 ? 40 : 40 - levelNumber * 4;
 
-    if (levelGroup !== 5) {
-      fakeCircles = []; // ✅ Clear fake circles when switching levels
-    }
-    // ✅ Stage 4: Static Circle (DO NOT run if Stage 5)
-    if (levelGroup === 4) {
-      let appearTime = 2.4 - (levelNumber - 1) * 0.4;
-      moveStaticCircle(appearTime);
-      return; // ✅ Stop execution so Stage 5 does not run
-    }
-
-    // ✅ Stage 5: Fake Circles (Only runs in Stage 5)
-    if (levelGroup === 5) {
-      fakeCircles = []; // Reset previous fake circles
-      for (let i = 0; i < levelNumber; i++) {
-        let fakePosX =
-          Math.random() * (canvas.width - 2 * circleRadius) + circleRadius;
-        let fakePosY =
-          Math.random() * (canvas.height - 2 * circleRadius) + circleRadius;
-        let fakeVelocityX = speed * (Math.random() > 0.5 ? 1 : -1);
-        let fakeVelocityY = speed * (Math.random() > 0.5 ? 1 : -1);
-        let fakeColor = getRandomColor(); // ✅ Assign a random color
-
-        fakeCircles.push({
-          x: fakePosX,
-          y: fakePosY,
-          vx: fakeVelocityX,
-          vy: fakeVelocityY,
-          color: fakeColor, // ✅ Store the color for each circle
-        });
-      }
-
-      // ✅ Also set main circle in Stage 5
+    posX = canvas.width / 2;
+    posY = canvas.height / 2;
+    if (levelGroup === 3) {
       posX = Math.random() * (canvas.width - 2 * circleRadius) + circleRadius;
       posY = Math.random() * (canvas.height - 2 * circleRadius) + circleRadius;
-      velocityX = speed * (Math.random() > 0.5 ? 1 : -1);
-      velocityY = speed * (Math.random() > 0.5 ? 1 : -1);
-
-      moveCircle(); // ✅ Start movement
-    } else {
-      posX = canvas.width / 2;
-      posY = canvas.height / 2;
-      if (levelGroup === 3) {
-        posX = Math.random() * (canvas.width - 2 * circleRadius) + circleRadius;
-        posY =
-          Math.random() * (canvas.height - 2 * circleRadius) + circleRadius;
-      }
-
-      velocityX = speed * (Math.random() > 0.5 ? 1 : -1);
-      velocityY = speed * (Math.random() > 0.5 ? 1 : -1);
-      moveCircle();
     }
+
+    velocityX = speed * (Math.random() > 0.5 ? 1 : -1);
+    velocityY = speed * (Math.random() > 0.5 ? 1 : -1);
+    moveCircle();
 
     canvas.removeEventListener("pointerdown", handleCircleClick);
     canvas.addEventListener("pointerdown", handleCircleClick);
   }
 
-  function moveStaticCircle(appearTime) {
-    clearTimeout(circleTimeout); // Clear any previous movement timer
-
-    posX = Math.random() * (canvas.width - 2 * circleRadius) + circleRadius;
-    posY = Math.random() * (canvas.height - 2 * circleRadius) + circleRadius;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawCircle(posX, posY, circleRadius, "#ffcc00");
-
-    console.log(
-      `Static Circle | Pos: (${posX}, ${posY}) | Appears for ${appearTime}s`
-    );
-
-    // Move the circle again after 'appearTime' seconds
-    circleTimeout = setTimeout(() => {
-      moveStaticCircle(appearTime);
-    }, appearTime * 1000);
-  }
-
   function moveCircle() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // ✅ Draw Fake Circles (Stage 5)
-    fakeCircles.forEach((circle) => {
-      drawCircle(circle.x, circle.y, circleRadius, circle.color); // ✅ Use each circle's unique color
-      circle.x += circle.vx;
-      circle.y += circle.vy;
-
-      // Bounce logic
-      if (
-        circle.x - circleRadius <= 0 ||
-        circle.x + circleRadius >= canvas.width
-      ) {
-        circle.vx = -circle.vx;
-      }
-      if (
-        circle.y - circleRadius <= 0 ||
-        circle.y + circleRadius >= canvas.height
-      ) {
-        circle.vy = -circle.vy;
-      }
-    });
-
-    // ✅ Draw Main Circle (Always Yellow)
+    // ✅ Draw Main Circle
     drawCircle(posX, posY, circleRadius, "#ffcc00");
 
     posX += velocityX;
     posY += velocityY;
 
-    // ✅ Bounce Logic for Main Circle
+    // ✅ Bounce Logic for Circle
     if (posX - circleRadius <= 0 || posX + circleRadius >= canvas.width) {
       hitSound.play();
       velocityX = -velocityX;
@@ -265,7 +206,6 @@ document.addEventListener("DOMContentLoaded", () => {
     clearInterval(timer);
     cancelAnimationFrame(animationFrame);
     clearTimeout(circleTimeout);
-    fakeCircles = []; // ✅ Clear fake circles when game ends
 
     backgroundMusic.currentTime = 0;
 
@@ -297,25 +237,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateLevelDisplay() {
-    let levelPrefix =
-      currentLevel <= 6
-        ? 1
-        : currentLevel <= 12
-        ? 2
-        : currentLevel <= 18
-        ? 3
-        : currentLevel <= 24
-        ? 4
-        : 5; // Stage 5
-
-    let levelNumber = ((currentLevel - 1) % 6) + 1; // Loop from 1-6
+    let levelPrefix = currentLevel <= 6 ? 1 : currentLevel <= 12 ? 2 : 3;
+    let levelNumber = ((currentLevel - 1) % 6) + 1;
 
     levelElement.textContent = `LEVEL ${levelPrefix}-${levelNumber}`;
   }
 
   function nextLevel() {
-    if (currentLevel < 30) {
-      // Now we have 30 levels (1-1 to 5-6)
+    if (currentLevel < 18) {
       currentLevel++;
       prepareEnv();
     }
@@ -354,22 +283,5 @@ document.addEventListener("DOMContentLoaded", () => {
       endGame();
       return;
     }
-
-    // ✅ Fake circles do nothing when clicked
-    fakeCircles.forEach((circle) => {
-      if (
-        Math.sqrt((mouseX - circle.x) ** 2 + (mouseY - circle.y) ** 2) <=
-        circleRadius
-      ) {
-        console.log("Fake circle clicked! No effect.");
-      }
-    });
-  }
-
-  function getRandomColor() {
-    // Generate a random hex color
-    return `#${Math.floor(Math.random() * 16777215)
-      .toString(16)
-      .padStart(6, "0")}`;
   }
 });
