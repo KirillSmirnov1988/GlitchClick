@@ -25,6 +25,8 @@ let username = null;
 let circle, posX, posY, velocityX, velocityY, timer, startTime, animationFrame;
 let currentLevel = 1;
 
+let circleTimeout;
+
 // =======================================
 // DOM готов
 // =======================================
@@ -180,6 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		clearInterval(timer);
 		cancelAnimationFrame(animationFrame);
+		clearTimeout(circleTimeout);
 
 		backgroundMusic.currentTime = 0;
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -244,12 +247,14 @@ document.addEventListener("DOMContentLoaded", () => {
 	// Функции - Работа с кругом
 	// =======================================
 	function spawnCircle() {
+		clearTimeout(circleTimeout);
+
 		let levelGroup =
 			currentLevel <= 6 ? 1 : currentLevel <= 12 ? 2 : currentLevel <= 18;
 
 		let levelNumber = ((currentLevel - 1) % 6) + 1;
 		let speed =
-			levelGroup !== 2 ? baseSpeed * (1 + (levelNumber - 1) * 0.25) : baseSpeed;
+			levelGroup !== 2 ? baseSpeed * (1 + (levelNumber - 1) * 0.15) : baseSpeed;
 		circleRadius =
 			levelGroup === 1 || levelGroup === 4 ? 40 : 40 - levelNumber * 4;
 
