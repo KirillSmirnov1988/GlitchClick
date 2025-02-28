@@ -168,3 +168,50 @@ body {
     text-transform: uppercase;
     margin-top: 10px;
 }
+
+.mute-icon {
+    grid-column: 5 / span 1; 
+    grid-row: 1;
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+    /* background-color: #ffcc00; */
+    color: black;
+    padding: 10px;
+    border: 2px solid black;
+    max-width: 90%; 
+    min-width: 80%; 
+    align-self: center;
+    justify-self: center;
+}
+
+.div-player-name {
+    grid-column: 2 / span 2; 
+    grid-row: 7; 
+    text-align: center;
+    font-size: 14px;
+    background-color: black;
+    color: #ffcc00;
+    border: 2px solid #ffcc00;
+    padding: 5px;
+    align-self: center;
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis; 
+}
+
+.div-switch-user {
+    grid-column: 4 / span 1;
+    grid-row: 7;
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+    background-color: #ffcc00;
+    color: black;
+    padding: 5px;
+    border: 2px solid black;
+    align-self: center;
+    justify-self: center;
+}
+
+

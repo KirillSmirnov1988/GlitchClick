@@ -19,9 +19,18 @@ document.addEventListener("DOMContentLoaded", () => {
 	const timerDisplay = document.getElementById("timer-cnt");
 	const gameMessage = document.getElementById("game-message");
 	const canvas = document.getElementById("game-canvas");
+	const muteOn = document.getElementById("mute-on");
+	const muteOff = document.getElementById("mute-off");
+	const playerNameElement = document.getElementById("player-name");
+	const switchUserButton = document.getElementById("switch-user");
 	const ctx = canvas.getContext("2d");
 	let gameEnded = false;
 	let circleRadius = 50;
+	let isMuted = false;
+
+	muteOn.addEventListener("click", toggleMute);
+	muteOff.addEventListener("click", toggleMute);
+
 	const popup = document.createElement("div");
 	popup.innerHTML = `
     <div class="popup">
@@ -34,6 +43,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	const usernameInput = document.getElementById("username-input");
 	const startFunButton = document.getElementById("start-fun");
+
+	switchUserButton.addEventListener("click", () => {
+		stopGame(); // Останавливаем текущую игру
+		showUserPopup(); // Показываем попап с выбором имени
+	});
 
 	let username = null;
 
@@ -61,6 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	// Event Listeners
 	startButton.addEventListener("click", startGame);
+
 	startFunButton.addEventListener("click", async () => {
 		username = usernameInput.value.trim();
 		if (!username) return alert("Please enter a name!");
@@ -76,14 +91,21 @@ document.addEventListener("DOMContentLoaded", () => {
 			if (data.success) {
 				localStorage.setItem("username", username);
 				popup.remove();
+				updatePlayerName(username);
 				console.log("✅ User data:", data.data);
+
+				// 🔥 Вот сюда добавляем загрузку рекорда для первого уровня
+				fetchHighScore(currentLevel);
 			} else {
 				alert("Error loading user!");
 			}
 		} catch (error) {
 			console.error("❌ Error:", error);
 		}
+
+		const playerNameElement = document.getElementById("player-name");
 	});
+
 	replayElement.addEventListener("click", restartGame);
 	nextLevelElement.addEventListener("click", nextLevel);
 	prevLevelElement.addEventListener("click", prevLevel);
@@ -293,5 +315,33 @@ document.addEventListener("DOMContentLoaded", () => {
 			endGame();
 			return;
 		}
+	}
+
+	function updatePlayerName(name) {
+		playerNameElement.textContent = `Now Playing: ${name}`;
+	}
+
+	function toggleMute() {
+		isMuted = !isMuted;
+
+		backgroundMusic.muted = isMuted;
+		hitSound.muted = isMuted;
+		clickSound.muted = isMuted;
+
+		muteOn.classList.toggle("hidden", isMuted);
+		muteOff.classList.toggle("hidden", !isMuted);
+	}
+
+	function stopGame() {
+		cancelAnimationFrame(animationFrame);
+		clearInterval(timer);
+		backgroundMusic.pause();
+		backgroundMusic.currentTime = 0;
+		currentLevel = 1;
+		updateLevelDisplay();
+	}
+
+	function showUserPopup() {
+		document.body.appendChild(popup);
 	}
 });
