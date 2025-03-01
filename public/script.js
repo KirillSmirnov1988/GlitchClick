@@ -12,7 +12,7 @@ const clickSound = new Audio("audio/click.mp3");
 clickSound.volume = 1.0;
 
 const baseSpeed = 2;
-const serverUrl = "http://localhost:3000";
+const serverUrl = window.location.origin;
 
 // =======================================
 // Game state variables
