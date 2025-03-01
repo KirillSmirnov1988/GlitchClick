@@ -1,5 +1,5 @@
 // =======================================
-// Константы (музыка, звуки, сервер)
+// Constants (music, sounds, server URL)
 // =======================================
 const backgroundMusic = new Audio("audio/retro.mp3");
 backgroundMusic.loop = true;
@@ -15,21 +15,22 @@ const baseSpeed = 2;
 const serverUrl = "http://localhost:3000";
 
 // =======================================
-// Переменные состояния игры
+// Game state variables
 // =======================================
 let gameEnded = false;
 let circleRadius = 50;
 let isMuted = false;
 let username = null;
+let isOffline = false;
 
 let circle, posX, posY, velocityX, velocityY, timer, startTime, animationFrame;
 let currentLevel = 1;
 
 // =======================================
-// DOM готов
+// DOM ready
 // =======================================
 document.addEventListener("DOMContentLoaded", () => {
-	// Получаем элементы
+	// DOM element references
 	const levelElement = document.getElementById("level");
 	const lastScoreElement = document.getElementById("cnt-score");
 	const hiScoreElement = document.getElementById("cnt-hi-score");
@@ -46,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	const switchUserButton = document.getElementById("switch-user");
 	const ctx = canvas.getContext("2d");
 
-	// Попап с вводом имени
+	// Popup for entering player name
 	const popup = document.createElement("div");
 	popup.innerHTML = `
         <div class="popup">
@@ -61,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	const startFunButton = document.getElementById("start-fun");
 
 	// =======================================
-	// События и обработчики
+	// Event listeners
 	// =======================================
 	muteOn.addEventListener("click", toggleMute);
 	muteOff.addEventListener("click", toggleMute);
@@ -86,6 +87,15 @@ document.addEventListener("DOMContentLoaded", () => {
 				body: JSON.stringify({ username }),
 			});
 
+			if (response.status === 503) {
+				switchToOfflineMode();
+				localStorage.setItem("username", username);
+				popup.remove();
+				updatePlayerName(username);
+				fetchHighScore(currentLevel);
+				return;
+			}
+
 			const data = await response.json();
 			if (data.success) {
 				localStorage.setItem("username", username);
@@ -96,7 +106,12 @@ document.addEventListener("DOMContentLoaded", () => {
 				alert("Error loading user!");
 			}
 		} catch (error) {
-			console.error("❌ Error:", error);
+			console.warn("❌ Server error, switching to offline mode.");
+			switchToOfflineMode();
+			localStorage.setItem("username", username);
+			popup.remove();
+			updatePlayerName(username);
+			fetchHighScore(currentLevel);
 		}
 	});
 
@@ -107,15 +122,15 @@ document.addEventListener("DOMContentLoaded", () => {
 	fetchHighScore(currentLevel);
 
 	// =======================================
-	// Функции - Инициализация
-	// =======================================
+	// Initialization functions
+	// ======================================
 	function resizeCanvas() {
 		canvas.width = canvas.offsetWidth;
 		canvas.height = canvas.offsetHeight;
 	}
 
 	// =======================================
-	// Функции - Пользователь и интерфейс
+	// Player and UI functions
 	// =======================================
 	function updatePlayerName(name) {
 		playerNameElement.textContent = `Now Playing: ${name}`;
@@ -138,7 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	// =======================================
-	// Функции - Игра
+	// Core game functions
 	// =======================================
 	function startGame() {
 		gameEnded = false;
@@ -209,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	// =======================================
-	// Функции - Работа с уровнями
+	// Level management functions
 	// =======================================
 	function updateLevelDisplay() {
 		const levelPrefix = currentLevel <= 6 ? 1 : currentLevel <= 12 ? 2 : 3;
@@ -241,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	// =======================================
-	// Функции - Работа с кругом
+	// Circle rendering and movement
 	// =======================================
 	function spawnCircle() {
 		let levelGroup =
@@ -316,38 +331,69 @@ document.addEventListener("DOMContentLoaded", () => {
 	canvas.addEventListener("pointerdown", handleCircleClick);
 
 	// =======================================
-	// Функции - Работа с сервером
+	// Server Communication Functions
 	// =======================================
 	async function fetchHighScore(level) {
-		if (!username) {
-			console.error("Username is not set");
+		if (isOffline) {
+			const scores = getOfflineScores();
+			hiScoreElement.textContent = scores[username]?.[level] || "-";
 			return;
 		}
+
 		try {
 			const response = await fetch(
 				`${serverUrl}/highscores/${username}/${level}`
 			);
 			const data = await response.json();
-			hiScoreElement.textContent =
-				data.highScore !== null ? data.highScore : "-";
-		} catch (error) {
-			console.error("Failed to fetch high score:", error);
+			hiScoreElement.textContent = data.highScore ?? "-";
+		} catch {
+			switchToOfflineMode();
 		}
 	}
 
 	async function updateHighScore(level, score) {
-		if (!username) {
-			console.error("Username is not set");
-			return;
+		if (isOffline) {
+			const scores = getOfflineScores();
+			scores[username] = scores[username] || {};
+			scores[username][level] = Math.min(
+				scores[username][level] ?? 9999,
+				score
+			).toFixed(2);
+			saveOfflineScores(scores);
+		} else {
+			try {
+				await fetch(`${serverUrl}/highscores/${username}/${level}`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ highScore: score }),
+				});
+			} catch {
+				switchToOfflineMode();
+				updateHighScore(level, score);
+			}
 		}
+	}
+
+	function getOfflineScores() {
+		return JSON.parse(localStorage.getItem("offlineScores") || "{}");
+	}
+
+	function saveOfflineScores(scores) {
+		localStorage.setItem("offlineScores", JSON.stringify(scores));
+	}
+
+	async function checkServerAvailable() {
 		try {
-			await fetch(`${serverUrl}/highscores/${username}/${level}`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ highScore: score }),
-			});
-		} catch (error) {
-			console.error("Failed to update high score:", error);
+			const response = await fetch(`${serverUrl}/ping`);
+			const data = await response.json();
+			return data.status === "ok";
+		} catch {
+			return false;
 		}
+	}
+
+	function switchToOfflineMode() {
+		isOffline = true;
+		alert("Server unavailable — switched to offline mode.");
 	}
 });
