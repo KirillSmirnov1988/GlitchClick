@@ -15,13 +15,37 @@
       <div id="timer-cnt" class="div6">0</div>
       <div id="cnt-hi-score" class="div7">0</div>
       <div id="level" class="div8">LEVEL 1-1</div>
-      <div id="board" class="div9">
-        <button id="start-button">START</button>
-        <div id="game-message" class="hidden"></div>
+      <div id="mute-on" class="mute-icon">
+        <!-- Включённый динамик -->
+        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 8L4 14H0V18H4L12 24V8Z" fill="#ffcc00"/>
+          <path d="M16 11C18.21 11 20 12.79 20 15C20 17.21 18.21 19 16 19" stroke="#ffcc00" stroke-width="2"/>
+          <path d="M16 6C21.52 6 26 10.48 26 16C26 21.52 21.52 26 16 26" stroke="#ffcc00" stroke-width="2"/>
+        </svg>
       </div>
+      
+      <div id="mute-off" class="mute-icon hidden">
+        <!-- Перечёркнутый динамик -->
+        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 8L4 14H0V18H4L12 24V8Z" fill="#ffcc00"/>
+          <path d="M16 11C18.21 11 20 12.79 20 15C20 17.21 18.21 19 16 19" stroke="#ffcc00" stroke-width="2"/>
+          <path d="M16 6C21.52 6 26 10.48 26 16C26 21.52 21.52 26 16 26" stroke="#ffcc00" stroke-width="2"/>
+          <line x1="2" y1="2" x2="30" y2="30" stroke="black" stroke-width="3"/>
+        </svg>
+      </div>
+      
+      <canvas id="game-canvas" class="div9"></canvas>
+      <button id="start-button">START</button>
+      <div id="game-message" class="hidden"></div>
+
       <div id="replay" class="div11">REPLAY</div>
       <div id="next-level" class="div12">NEXT LEVEL</div>
       <div id="prev-level" class="div13">PREV LEVEL</div>
+
+      <div id="player-name" class="div-player-name">Now Playing: -</div>
+
+      <div id="switch-user" class="div-switch-user">Switch User</div>
+
     </div>
 
     <script src="script.js"></script>

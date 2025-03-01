@@ -1,0 +1,25 @@
+{
+  "name": "glitchclick",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2",
+    "fs": "^0.0.1-security",
+    "ioredis": "^5.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KirillSmirnov1988/GlitchClick.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KirillSmirnov1988/GlitchClick/issues"
+  },
+  "homepage": "https://github.com/KirillSmirnov1988/GlitchClick#readme",
+  "description": ""
+}

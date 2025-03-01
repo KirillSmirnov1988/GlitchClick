@@ -40,22 +40,18 @@ body {
 .div8 { grid-column: 2 / span 3; grid-row: 3; text-align: center; }
 
 /* Game Board */
-.div9 { 
+#game-canvas {
     grid-column: 2 / span 3;
     grid-row: 4 / span 3;
     background-color: #111;
     border: 3px solid #ffcc00;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     width: 100%;
     height: 100%;
-    box-sizing: border-box; 
-    max-width: 100%; 
-    max-height: 100%; 
-    overflow: hidden; 
+    max-width: 100%;
+    max-height: 100%;
+    image-rendering: pixelated;
 }
+
 
 /* Start Button & Game Message */
 #start-button, #game-message {
@@ -67,7 +63,11 @@ body {
     padding: 10px 20px;
     cursor: pointer;
     text-transform: uppercase;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
+
 
 /* Hidden class to toggle visibility */
 .hidden {
@@ -77,8 +77,8 @@ body {
 /* Circle - Adjusts Dynamically */
 .circle {
     position: absolute;
-    width: max(4vw, 4vh); 
-    height: max(4vw, 4vh); 
+    width: max(5vw, 5vh); 
+    height: max(5vw, 5vh); 
     aspect-ratio: 1 / 1; 
     background-color: #ffcc00;
     border-radius: 50%;
@@ -136,4 +136,81 @@ body {
     align-self: center;
     justify-self: center;
 }
+
+.popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: black;
+    color: #ffcc00;
+    font-family: 'Press Start 2P', cursive;
+    text-align: center;
+    padding: 20px;
+    border: 3px solid #ffcc00;
+    z-index: 1000;
+}
+
+.popup input {
+    width: 80%;
+    padding: 10px;
+    font-size: 14px;
+    margin-top: 10px;
+    text-align: center;
+}
+
+.popup button {
+    background-color: #ffcc00;
+    color: black;
+    border: 2px solid black;
+    padding: 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+    margin-top: 10px;
+}
+
+.mute-icon {
+    grid-column: 5 / span 1; 
+    grid-row: 1;
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+    /* background-color: #ffcc00; */
+    color: black;
+    padding: 10px;
+    border: 2px solid black;
+    max-width: 90%; 
+    min-width: 80%; 
+    align-self: center;
+    justify-self: center;
+}
+
+.div-player-name {
+    grid-column: 2 / span 2; 
+    grid-row: 7; 
+    text-align: center;
+    font-size: 14px;
+    background-color: black;
+    color: #ffcc00;
+    border: 2px solid #ffcc00;
+    padding: 5px;
+    align-self: center;
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis; 
+}
+
+.div-switch-user {
+    grid-column: 4 / span 1;
+    grid-row: 7;
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+    background-color: #ffcc00;
+    color: black;
+    padding: 5px;
+    border: 2px solid #ffcc00;;
+    align-self: center;
+}
+
 
